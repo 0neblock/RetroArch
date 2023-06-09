@@ -24,6 +24,8 @@
 #include <SDL/SDL_video.h>
 
 #include <gfx/video_frame.h>
+#include <gfx/font_driver.h>
+#include <gfx/gfx_widgets.h>
 #include <string/stdstring.h>
 #include <encodings/utf.h>
 #include <features/features_cpu.h>
@@ -825,6 +827,13 @@ static bool sdl_miyoomini_gfx_frame(void *data, const void *frame,
    menu_driver_frame(video_info->menu_is_alive, video_info);
 #endif
 
+#ifdef HAVE_GFX_WIDGETS
+    bool widgets_active            = video_info->widgets_active;
+
+    if (widgets_active)
+       gfx_widgets_frame(video_info);
+#endif
+
    /* Render OSD text at flip */
    if (msg) {
       memcpy(vid->msg_tmp, msg, sizeof(vid->msg_tmp));
@@ -996,6 +1005,33 @@ static void sdl_miyoomini_apply_state_changes(void *data) {
 
 static uint32_t sdl_miyoomini_get_flags(void *data) { return 0; }
 
+// void set_osd_msg(
+//       void *data,
+//       const char *msg,
+//       const void *_params,
+//       void *font_data)
+// {
+//    const struct font_params *params = (const struct font_params*)_params;
+//    font_data_t                *font = (font_data_t*)(font_data
+//          ? font_data : video_font_driver);
+
+//    if (msg && *msg && font && font->renderer && font->renderer->render_msg)
+//    {
+// #ifdef HAVE_LANGEXTRA
+//       unsigned char tmp_buffer[64];
+//       char *new_msg = font_driver_reshape_msg(msg, tmp_buffer, sizeof(tmp_buffer));
+//       font->renderer->render_msg(data,
+//             font->renderer_data, new_msg, params);
+//       if (new_msg != (char*)tmp_buffer)
+//          free(new_msg);
+// #else
+//       char *new_msg = (char*)msg;
+//       font->renderer->render_msg(data,
+//             font->renderer_data, new_msg, params);
+// #endif
+//    }
+// }
+
 static const video_poke_interface_t sdl_miyoomini_poke_interface = {
    sdl_miyoomini_get_flags,
    NULL, /* load_texture */
@@ -1012,7 +1048,7 @@ static const video_poke_interface_t sdl_miyoomini_poke_interface = {
    sdl_miyoomini_apply_state_changes,
    sdl_miyoomini_set_texture_frame,
    sdl_miyoomini_set_texture_enable,
-   NULL, /* set_osd_msg */
+   font_driver_render_msg, /* set_osd_msg */
    NULL, /* sdl_show_mouse */
    NULL, /* sdl_grab_mouse_toggle */
    NULL, /* get_current_shader */
@@ -1103,6 +1139,10 @@ void sdl_miyoomini_gfx_get_overlay_interface(void *data, const video_overlay_int
 
 #endif
 
+#ifdef HAVE_GFX_WIDGETS
+static bool sdl_miyoomini_gfx_widgets_enabled(void *data) { return true; }
+#endif
+
 video_driver_t video_sdl_dingux = {
    sdl_miyoomini_gfx_init,
    sdl_miyoomini_gfx_frame,
@@ -1122,5 +1162,9 @@ video_driver_t video_sdl_dingux = {
 #ifdef HAVE_OVERLAY
    sdl_miyoomini_gfx_get_overlay_interface,
 #endif
-   sdl_miyoomini_get_poke_interface
+   sdl_miyoomini_get_poke_interface,
+   NULL, /* metal_wrap_type_to_enum */
+#ifdef HAVE_GFX_WIDGETS
+   sdl_miyoomini_gfx_widgets_enabled
+#endif
 };
